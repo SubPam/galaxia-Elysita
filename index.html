@@ -1,0 +1,928 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>su galaxia amarilla miamol </title>
+  <style>
+    html, body, canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      position: fixed;
+      background: black;
+      font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    /* Estilos de la Ventana Emergente (Modal) */
+    .modal-overlay {
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100%;
+      height: 100%;
+      background: rgba(0, 0, 0, 0.6);
+      backdrop-filter: blur(8px);
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+      opacity: 0;
+      pointer-events: none;
+      transition: opacity 0.3s ease;
+    }
+
+    .modal-overlay.active {
+      opacity: 1;
+      pointer-events: auto;
+    }
+	.modal-content {
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.25);
+      border-radius: 16px;
+      padding: 24px;
+      /* Se ajusta automáticamente al contenido del texto e imagen */
+      width: fit-content;
+      max-width: 85vw;
+      max-height: 85vh;
+      overflow-y: auto;
+      box-shadow: 0 15px 35px rgba(0, 0, 0, 0.5);
+      color: #fff;
+      text-align: center;
+      position: relative;
+      transform: scale(0.8);
+      transition: transform 0.3s ease;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+    }
+
+    .modal-overlay.active .modal-content {
+      transform: scale(1);
+    }
+
+    .modal-close-btn {
+      position: absolute;
+      top: 12px;
+      right: 12px;
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid rgba(255, 255, 255, 0.3);
+      color: white;
+      font-size: 18px;
+      width: 30px;
+      height: 30px;
+      border-radius: 50%;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      transition: background 0.2s ease;
+      z-index: 10;
+    }
+
+    .modal-close-btn:hover {
+      background: rgba(255, 59, 107, 0.8);
+    }
+
+    /* Ajuste responsivo de la imagen según sus dimensiones reales */
+    .modal-img {
+      width: auto;
+      height: auto;
+      max-width: 100%;
+      max-height: 50vh;
+      object-fit: contain;
+      border-radius: 12px;
+      margin-bottom: 16px;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+    }
+    .modal-title {
+      margin: 0 0 10px 0;
+      font-size: 1.25rem;
+      font-weight: 600;
+      color: #fff9c4;
+    }
+
+    .modal-text {
+      margin: 0;
+      font-size: 0.9rem;
+      line-height: 1.4;
+      color: #e0e0e0;
+    }
+  </style>
+</head>
+<body>
+	
+  <canvas id="canvas"></canvas>
+
+  <!-- Ventana Emergente Modal -->
+  <div id="modalOverlay" class="modal-overlay">
+    <div class="modal-content">
+      <button id="modalCloseBtn" class="modal-close-btn">&times;</button>
+      <img id="modalImg" class="modal-img" src="" alt="Detalle" />
+      <h3 id="modalTitle" class="modal-title">Título</h3>
+      <p id="modalText" class="modal-text">Descripción...</p>
+    </div>
+  </div>
+	<script src="imagenes_1.js"></script>
+	<script src="imagenes_2.js"></script>
+	<script src="imagenes_3.js"></script>
+	<script src="imagenes_4.js"></script>
+	<script src="imagenes_5.js"></script>
+  <script type="importmap">
+    {
+      "imports": {
+        "three": "https://cdn.skypack.dev/three@0.136.0",
+        "three/addons/": "https://cdn.skypack.dev/three@0.136.0/examples/jsm/"
+      }
+    }
+  </script>
+  <script type="module">
+    import {
+      AdditiveBlending,
+      BufferAttribute,
+      BufferGeometry,
+      CanvasTexture,
+      Color,
+      PerspectiveCamera,
+      Points,
+      RawShaderMaterial,
+      Scene,
+      WebGLRenderer,
+      Sprite,
+      SpriteMaterial,
+      Group,
+      Clock,
+      Vector3,
+      Raycaster,
+      Vector2,
+      TextureLoader
+    } from "three";
+    import { OrbitControls } from "three/addons/controls/OrbitControls.js";
+    import { TWEEN } from "https://cdn.skypack.dev/three@0.136.0/examples/jsm/libs/tween.module.min.js";
+
+    console.clear();
+    const customModalData = {
+		1: { text: "Tiene los ojos cafés bonito, el más bonito, pero bonito de sentirse seguro, tranquilo y a gusto todo el tiempo, bonito de lugar tranquilo, acogedor y callado, osea bonito pero de ese tipo de bonito que tranquiliza el alma y corazón, ese bonito de saber que todo está y estará bien y que no se necesita ir a otro lugar porq ahí es donde todo el tiempo quisiera estar", buttonSrc: IMAGENES.boton_1, imageSrc: IMAGENES.modal_1 },
+	2: { text: "Te amo para siempre y siempre es hoy", buttonSrc: IMAGENES.boton_2, imageSrc: IMAGENES.modal_2 },
+	3: { text: "te miro y encuentro tus ojos viendo los mios, una mirada dulce y calida, miamor que dificil es para mi decirte lo que pienso porque, como le describo el mejunje de emociones que explotan cuando la veo? ", buttonSrc: IMAGENES.boton_3, imageSrc: IMAGENES.modal_3 },
+	4: { text: "no soy perfecto pero por usted lo intento <3", buttonSrc: IMAGENES.boton_4, imageSrc: IMAGENES.modal_4 },
+	5: { text: "tiamo con todo lo bueno que no ves y todo lo malo que dices tener", buttonSrc: IMAGENES.boton_5, imageSrc: IMAGENES.modal_5 },
+	6: { text: "cuando este malita, digame, no le quitare el dolor pero me hare bolita con uste miamorsito", buttonSrc: IMAGENES.boton_6, imageSrc: IMAGENES.modal_6 },
+	7: { text: "miamolsito testraño mchote sabia q es elamordemivida? testraño miamor tiamo miamolsito miamol miamol miamol miamolsito tiamo miamor sabia q la amo mucho miamol testraño tiamomiamol", buttonSrc: IMAGENES.boton_7, imageSrc: IMAGENES.modal_7 },
+	8: { text: "es lo unico q mis ojos ling ling ven pq apenas y los puedo abril y si ven es a uste miamolsito", buttonSrc: IMAGENES.boton_8, imageSrc: IMAGENES.modal_8 },
+	9: { text: "vivire amandola hasta morir por su amor", buttonSrc: IMAGENES.boton_9, imageSrc: IMAGENES.modal_9 },
+	10: { text: "mi corazon es tuyo, mucho mas que mio, en cada latido y suspiro probocado cuando la miro, la pienso, la siento", buttonSrc: IMAGENES.boton_10, imageSrc: IMAGENES.modal_10 },
+	11: { text: "cada vez que me abraza fuerte siento como si me armara de nuevo ", buttonSrc: IMAGENES.boton_11, imageSrc: IMAGENES.modal_11 },
+	12: { text: "si supiera la paz que me da escuchar su voz cuando estoy estresado o preocupado, no dejaría de hablarme nunca. Tiene una dulzura tan natural que me tranquiliza el alma y me hace entender que teniéndola a usted, todo esta bien", buttonSrc: IMAGENES.boton_12, imageSrc: IMAGENES.modal_12 },
+	13: { text: "se volvió mi costumbre más bonita, mi pensamiento preferido antes de dormir y la primera razón por la que sonrío al despertarme.", buttonSrc: IMAGENES.boton_13, imageSrc: IMAGENES.modal_13 },
+	14: { text: "La quiero hoy y en cada momento que pase, es mi refugio, mi abrigo y mi hogar", buttonSrc: IMAGENES.boton_14, imageSrc: IMAGENES.modal_14 },
+	15: { text: "sabia q las focas demuestran su cariño rosandose la nariz como un beso esquimal, poreso hay tanta foto de foquitas con la nariz junta, es su besito, chi fueramos focas me daria besito?", buttonSrc: IMAGENES.boton_15, imageSrc: IMAGENES.modal_15 },
+	16: { text: "las nutrias se toman de la manita cuando estan en el agua, esto evita q la corriente las separe, poreso la quiero agarrar de la manita siempre no quiero q se separe y se me vaya miamolsito", buttonSrc: IMAGENES.boton_16, imageSrc: IMAGENES.modal_16 },
+	17: { text: "miamol sabia q los caballitos de mar cuando se les muere la pareja, poco tiempo despues se muere el otro pq no pueden vivir el uno sin el otro, yosoyese", buttonSrc: IMAGENES.boton_17, imageSrc: IMAGENES.modal_17 },
+	18: { text: "las nutrias demuestran su amor compartiendo su comida con sus parejas y jugando con ellas, asi como tuiyo miamolsito", buttonSrc: IMAGENES.boton_18, imageSrc: IMAGENES.modal_18 },
+	19: { text: "los gibones son changuitos chinos que demuestran su afecto durmiendo abrazados en las copas de los arboles, seamos unos changuitos chinos miamol", buttonSrc: IMAGENES.boton_19, imageSrc: IMAGENES.modal_19 },
+	20: { text: "no hay relojes capaces de frenar mis hancias locas de quemar horas contigo", buttonSrc: IMAGENES.boton_20, imageSrc: IMAGENES.modal_20 },
+	21: { text: "menos mal que te he encontrado y que en aquella noche gris tu te fijaste en mi", buttonSrc: IMAGENES.boton_21, imageSrc: IMAGENES.modal_21 },
+	22: { text: "llevame en un beso, donde nace el infinito, donde no hay principio ni final ", buttonSrc: IMAGENES.boton_22, imageSrc: IMAGENES.modal_22 },
+	23: { text: "mi corazon palpita con tu encuentro, obsesionado por volverte a ver, mi corazon revive aquel momento en que tu beso desato el amor", buttonSrc: IMAGENES.boton_23, imageSrc: IMAGENES.modal_23 },
+	24: { text: "te he traido flores del jardin que me invente, si quieres puedes verlo, lo hice para ti tambien, y asi no importara que estes muy lejos, tendras la puerta abierta", buttonSrc: IMAGENES.boton_24, imageSrc: IMAGENES.modal_24 },
+	25: { text: "siempre es ella quien me salva del tormento, de la calma, y en las nocehs en que no esta conmigo, sueño con el lunar de su hombligo", buttonSrc: IMAGENES.boton_25, imageSrc: IMAGENES.modal_25 },
+	26: { text: "estoy aprendiendo a cantar, para que sepa que no solo la amo en acordes, sino enel alma y corazon", buttonSrc: IMAGENES.boton_26, imageSrc: IMAGENES.modal_26 },
+	27: { text: "llename de besos la nevera, que estoy flaco de no verte", buttonSrc: IMAGENES.boton_27, imageSrc: IMAGENES.modal_27 },
+	28: { text: "no podre bajarle la luna pero si crearle un universo para uste solita miamol", buttonSrc: IMAGENES.boton_28, imageSrc: IMAGENES.modal_28 },
+	29: { text: "La envidia surge por tener un corazón; la gula surge por tener un corazón; la codicia surge por tener un corazón; el orgullo surge por tener un corazón; la pereza surge por tener un corazón; la ira surge por tener un corazón. Por eso, deseo todo lo que eres tú. ", buttonSrc: IMAGENES.boton_29, imageSrc: IMAGENES.modal_29 },
+	30: { text: "Si mañana te convirtieras en una serpiente, y comenzaras a devorar humanos, y con esa misma boca con la que los devoraste, me gritaras: '¡Te amo!', ¿aún podría decirte 'Te amo' de la misma manera en que lo hago hoy?", buttonSrc: IMAGENES.boton_30, imageSrc: IMAGENES.modal_30 },
+	31: { text: "Tu, sin tus pecados eres como el sol, Tu aun con tus pecados, eres como el sol", buttonSrc: IMAGENES.boton_31, imageSrc: IMAGENES.modal_31 },
+	32: { text: "Si me das alas, volare popr ti, Aunque este lugar se sumerja en las aguas; Si me das una espada luchare por ti, Aunque el inmenso cielo te atraviese con su luz", buttonSrc: IMAGENES.boton_32, imageSrc: IMAGENES.modal_32 },
+	33: { text: "nada puede cambiar mi mundo, solo quiero el poder de protegerte, es todo lo que quiero", buttonSrc: IMAGENES.boton_33, imageSrc: IMAGENES.modal_33 },
+	34: { text: "tiamomiamol", buttonSrc: IMAGENES.boton_34, imageSrc: IMAGENES.modal_34 },
+	35: { text: "tiamomiamol", buttonSrc: IMAGENES.boton_35, imageSrc: IMAGENES.modal_35 },
+	36: { text: "tiamomiamol", buttonSrc: IMAGENES.boton_36, imageSrc: IMAGENES.modal_36 },
+	37: { text: "tiamomiamol", buttonSrc: IMAGENES.boton_37, imageSrc: IMAGENES.modal_37 },
+	38: { text: "tiamomiamol", buttonSrc: IMAGENES.boton_38, imageSrc: IMAGENES.modal_38 },
+	39: { text: "vesito tiamomiamorsito", buttonSrc: IMAGENES.boton_39, imageSrc: IMAGENES.modal_39 },
+	40: { text: "tiamomiamol", buttonSrc: IMAGENES.boton_40, imageSrc: IMAGENES.modal_40 },
+	41: { text: "tiamomiamol", buttonSrc: IMAGENES.boton_41, imageSrc: IMAGENES.modal_41 },
+	42: { text: "tiamomiamol", buttonSrc: IMAGENES.boton_42, imageSrc: IMAGENES.modal_42 },
+	43: { text: "tiamomiamol", buttonSrc: IMAGENES.boton_43, imageSrc: IMAGENES.modal_43 },
+	44: { text: "tiamomiamol", buttonSrc: IMAGENES.boton_44, imageSrc: IMAGENES.modal_44 },
+	45: { text: "tiamomiamol", buttonSrc: IMAGENES.boton_45, imageSrc: IMAGENES.modal_45 },
+	46: { text: "tiamomiamol", buttonSrc: IMAGENES.boton_46, imageSrc: IMAGENES.modal_46 },
+	47: { text: "tiamomiamol", buttonSrc: IMAGENES.boton_47, imageSrc: IMAGENES.modal_47 },
+	48: { text: "tiamomiamol", buttonSrc: IMAGENES.boton_48, imageSrc: IMAGENES.modal_48 }
+ };
+  
+    // --- Generador de texturas locales en formato DataURL ---
+    function createCustomTexture(number) {
+      const btnCanvas = document.createElement("canvas");
+      btnCanvas.width = 128;
+      btnCanvas.height = 128;
+      const bCtx = btnCanvas.getContext("2d");
+
+      // Círculo translúcido brillante
+      const gradient = bCtx.createRadialGradient(64, 64, 10, 64, 64, 60);
+      gradient.addColorStop(0, "rgba(255, 255, 255, 1)");
+      gradient.addColorStop(0.5, "rgba(255, 59, 107, 0.8)");
+      gradient.addColorStop(1, "rgba(255, 59, 107, 0)");
+
+      bCtx.fillStyle = gradient;
+      bCtx.beginPath();
+      bCtx.arc(64, 64, 60, 0, Math.PI * 2);
+      bCtx.fill();
+
+      // Borde
+      bCtx.strokeStyle = "#fff9c4";
+      bCtx.lineWidth = 4;
+      bCtx.beginPath();
+      bCtx.arc(64, 64, 40, 0, Math.PI * 2);
+      bCtx.stroke();
+
+      // Número
+      bCtx.fillStyle = "#ffffff";
+      bCtx.font = "bold 32px Arial";
+      bCtx.textAlign = "center";
+      bCtx.textBaseline = "middle";
+      bCtx.fillText(number, 64, 64);
+
+      return {
+        texture: new CanvasTexture(btnCanvas),
+        dataUrl: btnCanvas.toDataURL()
+      };
+    }
+
+    // --- Configuración inicial ---
+    const count = 128 ** 2;
+    const scene = new Scene();
+    const camera = new PerspectiveCamera(60, innerWidth / innerHeight, 0.1, 100);
+    camera.position.set(0, 2, 3);
+    
+    const renderer = new WebGLRenderer({ canvas: document.getElementById('canvas') });
+    renderer.setSize(innerWidth, innerHeight);
+    renderer.setPixelRatio(Math.min(window.devicePixelRatio, 2));
+    
+    const orbit = new OrbitControls(camera, renderer.domElement);
+
+    // --- Utilidades para shaders ---
+    const shaderUtils = `
+      float random (vec2 st) {
+        return fract(sin(dot(st.xy, vec2(12.9898, 78.233))) * 43758.5453123);
+      }
+
+      vec3 scatter (vec3 seed) {
+        float u = random(seed.xy);
+        float v = random(seed.yz);
+        float theta = u * 6.28318530718;
+        float phi = acos(2.0 * v - 1.0);
+
+        float sinTheta = sin(theta);
+        float cosTheta = cos(theta);
+        float sinPhi = sin(phi);
+        float cosPhi = cos(phi);
+
+        float x = sinPhi * cosTheta;
+        float y = sinPhi * sinTheta;
+        float z = cosPhi;
+
+        return vec3(x, y, z);
+      }
+    `;
+
+    // --- Textura alpha (puntos en forma de cruz) ---
+    const ctx = document.createElement("canvas").getContext("2d");
+    ctx.canvas.width = ctx.canvas.height = 32;
+
+    ctx.fillStyle = "#000";
+    ctx.fillRect(0, 0, 32, 32);
+
+    let grd = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+    grd.addColorStop(0.0, "#fff");
+    grd.addColorStop(1.0, "#000");
+    ctx.fillStyle = grd;
+    ctx.beginPath();
+    ctx.rect(15, 0, 2, 32);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.rect(0, 15, 32, 2);
+    ctx.fill();
+
+    grd = ctx.createRadialGradient(16, 16, 0, 16, 16, 16);
+    grd.addColorStop(0.1, "#ffff");
+    grd.addColorStop(0.6, "#0000");
+    ctx.fillStyle = grd;
+    ctx.fillRect(0, 0, 32, 32);
+
+    const alphaMap = new CanvasTexture(ctx.canvas);
+
+    // --- GALAXIA PRINCIPAL ---
+    const galaxyGeometry = new BufferGeometry();
+    const galaxyPosition = new Float32Array(count * 3);
+    const galaxySeed = new Float32Array(count * 3);
+    const galaxySize = new Float32Array(count);
+
+    for (let i = 0; i < count; i++) {
+      galaxyPosition[i * 3] = i / count;
+      galaxySeed[i * 3 + 0] = Math.random();
+      galaxySeed[i * 3 + 1] = Math.random();
+      galaxySeed[i * 3 + 2] = Math.random();
+      galaxySize[i] = Math.random() * 2 + 0.5;
+    }
+
+    galaxyGeometry.setAttribute("position", new BufferAttribute(galaxyPosition, 3));
+    galaxyGeometry.setAttribute("size", new BufferAttribute(galaxySize, 1));
+    galaxyGeometry.setAttribute("seed", new BufferAttribute(galaxySeed, 3));
+
+    const innColor = new Color("#fff9c4");
+    const outColor = new Color("#ffc400");
+
+    const galaxyMaterial = new RawShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 },
+        uSize: { value: renderer.getPixelRatio() },
+        uBranches: { value: 2 },
+        uRadius: { value: 0 },
+        uSpin: { value: Math.PI * 0.25 },
+        uRandomness: { value: 0 },
+        uAlphaMap: { value: alphaMap },
+        uColorInn: { value: innColor },
+        uColorOut: { value: outColor }
+      },
+      vertexShader: `
+        precision highp float;
+        attribute vec3 position;
+        attribute float size;
+        attribute vec3 seed;
+        uniform mat4 projectionMatrix;
+        uniform mat4 modelViewMatrix;
+        uniform float uTime;
+        uniform float uSize;
+        uniform float uBranches;
+        uniform float uRadius;
+        uniform float uSpin;
+        uniform float uRandomness;
+        varying float vDistance;
+        #define PI  3.14159265359
+        #define PI2 6.28318530718
+        #include <random, scatter>
+        void main() {
+          vec3 p = position;
+          float st = sqrt(p.x);
+          float qt = p.x * p.x;
+          float mt = mix(st, qt, p.x);
+          float angle = qt * uSpin * (2.0 - sqrt(1.0 - qt));
+          float branchOffset = (PI2 / uBranches) * floor(seed.x * uBranches);
+          p.x = position.x * cos(angle + branchOffset) * uRadius;
+          p.z = position.x * sin(angle + branchOffset) * uRadius;
+          p += scatter(seed) * random(seed.zx) * uRandomness * mt;
+          p.y *= 0.5 + qt * 0.5;
+          vec3 temp = p;
+          float ac = cos(-uTime * (2.0 - st) * 0.5);
+          float as = sin(-uTime * (2.0 - st) * 0.5);
+          p.x = temp.x * ac - temp.z * as;
+          p.z = temp.x * as + temp.z * ac;
+          vDistance = mt;
+          vec4 mvp = modelViewMatrix * vec4(p, 1.0);
+          gl_Position = projectionMatrix * mvp;
+          gl_PointSize = (10.0 * size * uSize) / -mvp.z;
+        }
+      `,
+      fragmentShader: `
+        precision highp float;
+        uniform vec3 uColorInn;
+        uniform vec3 uColorOut;
+        uniform sampler2D uAlphaMap;
+        varying float vDistance;
+        #define PI  3.14159265359
+        void main() {
+          vec2 uv = vec2(gl_PointCoord.x, 1.0 - gl_PointCoord.y);
+          float a = texture2D(uAlphaMap, uv).g;
+          if (a < 0.1) discard;
+          vec3 color = mix(uColorInn, uColorOut, vDistance);
+          float c = step(0.99, (sin(gl_PointCoord.x * PI) + sin(gl_PointCoord.y * PI)) * 0.5);
+          color = max(color, vec3(c));
+          gl_FragColor = vec4(color, a);
+        }
+      `,
+      transparent: true,
+      depthTest: false,
+      depthWrite: false,
+      blending: AdditiveBlending
+    });
+
+    const galaxy = new Points(galaxyGeometry, galaxyMaterial);
+    galaxy.material.onBeforeCompile = (shader) => {
+      shader.vertexShader = shader.vertexShader.replace(
+        "#include <random, scatter>",
+        shaderUtils
+      );
+    };
+    scene.add(galaxy);
+
+    // --- CORAZÓN DE PARTÍCULAS EN 3D ---
+    const heartCount = 6000;
+    const heartGeometry = new BufferGeometry();
+    const heartPosition = new Float32Array(heartCount * 3);
+    const heartSize = new Float32Array(heartCount);
+    const heartSeed = new Float32Array(heartCount);
+
+    function heartCurve(t) {
+      const x = 16 * Math.pow(Math.sin(t), 3);
+      const y = 13 * Math.cos(t) - 5 * Math.cos(2 * t) - 2 * Math.cos(3 * t) - Math.cos(4 * t);
+      return { x, y };
+    }
+
+    const heartScale = 0.026;
+    for (let i = 0; i < heartCount; i++) {
+      const t = Math.random() * Math.PI * 2;
+      const { x, y } = heartCurve(t);
+      const fill = Math.sqrt(Math.random());
+      const px = x * fill;
+      const py = y * fill;
+      const depth = (Math.random() - 0.5) * 3.0;
+
+      heartPosition[i * 3 + 0] = px * heartScale;
+      heartPosition[i * 3 + 1] = py * heartScale + 0.05;
+      heartPosition[i * 3 + 2] = depth * heartScale;
+      heartSeed[i] = Math.random();
+      heartSize[i] = Math.random() * 2 + 0.6;
+    }
+
+    heartGeometry.setAttribute("position", new BufferAttribute(heartPosition, 3));
+    heartGeometry.setAttribute("size", new BufferAttribute(heartSize, 1));
+    heartGeometry.setAttribute("seed", new BufferAttribute(heartSeed, 1));
+
+    const heartMaterial = new RawShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 },
+        uSize: { value: renderer.getPixelRatio() },
+        uAlphaMap: { value: alphaMap },
+        uColorInn: { value: new Color("#fff5cc") },
+        uColorOut: { value: new Color("#ff3b6b") },
+        uOpacity: { value: 0 }
+      },
+      vertexShader: `
+        precision highp float;
+        attribute vec3 position;
+        attribute float size;
+        attribute float seed;
+        uniform mat4 projectionMatrix;
+        uniform mat4 modelViewMatrix;
+        uniform float uTime;
+        uniform float uSize;
+        varying float vSeed;
+        void main() {
+          float beat = 1.0 + 0.08 * sin(uTime * 3.0) + 0.04 * sin(uTime * 5.2 + 1.0);
+          vec3 p = position * beat;
+          vSeed = seed;
+          vec4 mvp = modelViewMatrix * vec4(p, 1.0);
+          gl_Position = projectionMatrix * mvp;
+          gl_PointSize = (11.0 * size * uSize) / -mvp.z;
+        }
+      `,
+      fragmentShader: `
+        precision highp float;
+        uniform vec3 uColorInn;
+        uniform vec3 uColorOut;
+        uniform sampler2D uAlphaMap;
+        uniform float uOpacity;
+        varying float vSeed;
+        void main() {
+          vec2 uv = vec2(gl_PointCoord.x, 1.0 - gl_PointCoord.y);
+          float a = texture2D(uAlphaMap, uv).g;
+          if (a < 0.1) discard;
+          vec3 color = mix(uColorInn, uColorOut, vSeed);
+          gl_FragColor = vec4(color, a * uOpacity);
+        }
+      `,
+      transparent: true,
+      depthTest: false,
+      depthWrite: false,
+      blending: AdditiveBlending
+    });
+
+    const heart = new Points(heartGeometry, heartMaterial);
+    heart.visible = false;
+    scene.add(heart);
+	
+	// --- SPRITES DE DEDICACIÓN (48 BOTONES EN TOTAL) ---
+    const totalButtons = 48; 
+    const spriteGroup = new Group();
+    spriteGroup.visible = false;
+    scene.add(spriteGroup);
+
+    const finalRadius = 1.618;
+    const finalSpin = Math.PI * 2;
+    const finalRandomness = 0.5;
+    const branches = galaxyMaterial.uniforms.uBranches.value;
+
+    const interactiveSprites = [];
+    const textureLoader = new TextureLoader();
+
+    for (let i = 0; i < totalButtons; i++) {
+      const buttonId = i + 1;
+      const generated = createCustomTexture(buttonId);
+      const custom = customModalData[buttonId] || {};
+
+      let spriteTexture;
+
+      // Si existe una ruta de imagen local, la cargamos usando TextureLoader de Three.js
+      if (custom.buttonSrc && custom.buttonSrc.trim() !== "") {
+        spriteTexture = textureLoader.load(
+          custom.buttonSrc,
+          undefined,
+          undefined,
+          (err) => {
+            console.warn(`No se pudo cargar la imagen local: ${custom.buttonSrc}. Usando textura por defecto.`, err);
+            // Si la imagen falla o la ruta no existe, usa el botón por defecto
+            textureLoader.load(generated.dataUrl, (fallbackTex) => {
+              sprite.material.map = fallbackTex;
+              sprite.material.needsUpdate = true;
+            });
+          }
+        );
+      } else {
+        // Si no hay imagen configurada, se usa el botón rosa generado por código
+        spriteTexture = textureLoader.load(generated.dataUrl);
+      }
+
+      // Imagen para la ventana modal
+      const modalImage = custom.imageSrc && custom.imageSrc.trim() !== "" ? custom.imageSrc : generated.dataUrl;
+
+      const material = new SpriteMaterial({
+        map: spriteTexture,
+        transparent: true,
+        depthTest: false,
+        depthWrite: false,
+        sizeAttenuation: true
+      });
+
+      const sprite = new Sprite(material);
+
+      const dist = Math.random() * 0.7 + 0.2;
+      const qt = dist * dist;
+      const st = Math.sqrt(dist);
+      const mt = (st + qt) / 2.0;
+
+      const angle = qt * finalSpin * (2.0 - Math.sqrt(1.0 - qt));
+      const branchOffset = ((Math.PI * 2) / branches) * Math.floor(Math.random() * branches);
+
+      let x = dist * Math.cos(angle + branchOffset) * finalRadius;
+      let z = dist * Math.sin(angle + branchOffset) * finalRadius;
+
+      const u = Math.random();
+      const v = Math.random();
+      const theta = u * 2.0 * Math.PI;
+      const phi = Math.acos(2.0 * v - 1.0);
+      const randX = Math.sin(phi) * Math.cos(theta);
+      const randY = Math.sin(phi) * Math.sin(theta);
+      const randZ = Math.cos(phi);
+
+      const scatterAmount = Math.random() * finalRandomness * mt;
+      x += randX * scatterAmount;
+      z += randZ * scatterAmount;
+
+      let y = randY * scatterAmount;
+      y *= 0.5 + qt * 0.5;
+
+      sprite.position.set(x, y, z);
+      sprite.scale.set(0.08, 0.08, 0.08);
+
+      sprite.userData = {
+        id: buttonId,
+        text: custom.text || `Detalle especial número ${buttonId} ubicado alrededor del corazón.`,
+        imageSrc: modalImage
+      };
+
+      spriteGroup.add(sprite);
+      interactiveSprites.push(sprite);
+    }
+    // --- INTERACCIÓN Y RAYCASTING PARA LOS BOTONES 3D ---
+    const raycaster = new Raycaster();
+    const mouse = new Vector2();
+    let hoveredSprite = null;
+
+    const modalOverlay = document.getElementById("modalOverlay");
+    const modalCloseBtn = document.getElementById("modalCloseBtn");
+    const modalImg = document.getElementById("modalImg");
+    const modalTitle = document.getElementById("modalTitle");
+    const modalText = document.getElementById("modalText");
+
+    function openModal(data) {
+      modalImg.src = data.imageSrc;
+      modalTitle.textContent = data.title;
+      modalText.textContent = data.text;
+      modalOverlay.classList.add("active");
+    }
+
+    function closeModal() {
+      modalOverlay.classList.remove("active");
+    }
+
+    modalCloseBtn.addEventListener("click", closeModal);
+    modalOverlay.addEventListener("click", (e) => {
+      if (e.target === modalOverlay) closeModal();
+    });
+
+    window.addEventListener("pointermove", (e) => {
+      mouse.x = (e.clientX / window.innerWidth) * 2 - 1;
+      mouse.y = -(e.clientY / window.innerHeight) * 2 + 1;
+
+      if (!spriteGroup.visible) return;
+
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObjects(interactiveSprites);
+
+      if (intersects.length > 0) {
+        const obj = intersects[0].object;
+        if (hoveredSprite !== obj) {
+          if (hoveredSprite) hoveredSprite.scale.set(0.08, 0.08, 0.08);
+          hoveredSprite = obj;
+          hoveredSprite.scale.set(0.12, 0.12, 0.12);
+        }
+        document.body.style.cursor = "pointer";
+      } else {
+        if (hoveredSprite) {
+          hoveredSprite.scale.set(0.08, 0.08, 0.08);
+          hoveredSprite = null;
+        }
+        document.body.style.cursor = "default";
+      }
+    });
+
+    window.addEventListener("click", () => {
+      if (!spriteGroup.visible) return;
+
+      raycaster.setFromCamera(mouse, camera);
+      const intersects = raycaster.intersectObjects(interactiveSprites);
+
+      if (intersects.length > 0) {
+        const selected = intersects[0].object;
+        openModal(selected.userData);
+      }
+    });
+
+    // --- UNIVERSO DE FONDO ---
+    const universeGeometry = new BufferGeometry();
+    const universePosition = new Float32Array((count * 3) / 2);
+    const universeSeed = new Float32Array((count * 3) / 2);
+    const universeSize = new Float32Array(count / 2);
+
+    for (let i = 0; i < count / 2; i++) {
+      universeSeed[i * 3 + 0] = Math.random();
+      universeSeed[i * 3 + 1] = Math.random();
+      universeSeed[i * 3 + 2] = Math.random();
+      universeSize[i] = Math.random() * 2 + 0.5;
+    }
+
+    universeGeometry.setAttribute("position", new BufferAttribute(universePosition, 3));
+    universeGeometry.setAttribute("seed", new BufferAttribute(universeSeed, 3));
+    universeGeometry.setAttribute("size", new BufferAttribute(universeSize, 1));
+
+    const universeMaterial = new RawShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 },
+        uSize: galaxyMaterial.uniforms.uSize,
+        uRadius: galaxyMaterial.uniforms.uRadius,
+        uAlphaMap: galaxyMaterial.uniforms.uAlphaMap
+      },
+      vertexShader: `
+        precision highp float;
+        attribute vec3 seed;
+        attribute float size;
+        uniform mat4 projectionMatrix;
+        uniform mat4 modelViewMatrix;
+        uniform float uTime;
+        uniform float uSize;
+        uniform float uRadius;
+        #define PI  3.14159265359
+        #define PI2 6.28318530718
+        #include <random, scatter>
+        const float r = 3.0;
+        const vec3 s = vec3(2.1, 1.3, 2.1);
+        void main() {
+          vec3 p = scatter(seed) * r * s;
+          float q = random(seed.zx);
+          for (int i = 0; i < 3; i++) q *= q;
+          p *= q;
+          float l = length(p) / (s.x * r);
+          p = l < 0.001 ? (p / l) : p;
+          vec3 temp = p;
+          float ql = 1.0 - l;
+          for (int i = 0; i < 3; i++) ql *= ql;
+          float ac = cos(-uTime * ql);
+          float as = sin(-uTime * ql);
+          p.x = temp.x * ac - temp.z * as;
+          p.z = temp.x * as + temp.z * ac;
+          vec4 mvp = modelViewMatrix * vec4(p * uRadius, 1.0);
+          gl_Position = projectionMatrix * mvp;
+          l = (2.0 - l) * (2.0 - l);
+          gl_PointSize = (r * size * uSize * l) / -mvp.z;
+        }
+      `,
+      fragmentShader: `
+        precision highp float;
+        uniform sampler2D uAlphaMap;
+        #define PI 3.14159265359
+        void main() {
+          vec2 uv = vec2(gl_PointCoord.x, 1.0 - gl_PointCoord.y);
+          float a = texture2D(uAlphaMap, uv).g;
+          if (a < 0.1) discard;
+          gl_FragColor = vec4(vec3(1.0), a);
+        }
+      `,
+      transparent: true,
+      depthTest: false,
+      depthWrite: false,
+      blending: AdditiveBlending
+    });
+
+    const universe = new Points(universeGeometry, universeMaterial);
+    universe.material.onBeforeCompile = (shader) => {
+      shader.vertexShader = shader.vertexShader.replace(
+        "#include <random, scatter>",
+        shaderUtils
+      );
+    };
+    scene.add(universe);
+
+    // --- ESTRELLAS FUGACES ---
+    const shootingStarCount = 200;
+    const shootingStarGeometry = new BufferGeometry();
+    const ssPosition = new Float32Array(shootingStarCount * 3);
+    const ssVelocity = new Float32Array(shootingStarCount * 3);
+    const ssStartTime = new Float32Array(shootingStarCount);
+    const ssSize = new Float32Array(shootingStarCount);
+    const ssColor = new Float32Array(shootingStarCount * 3);
+
+    function getRandomSpherePoint(radius, innerRadius = 0) {
+      const u = Math.random();
+      const v = Math.random();
+      const theta = u * 2.0 * Math.PI;
+      const phi = Math.acos(2.0 * v - 1.0);
+      let r = innerRadius + Math.random() * (radius - innerRadius);
+      const x = r * Math.sin(phi) * Math.cos(theta);
+      const y = r * Math.sin(phi) * Math.sin(theta);
+      const z = r * Math.cos(phi);
+      return new Vector3(x, y, z);
+    }
+
+    const ssOuterRadius = 6.0;
+    const ssInnerRadius = 0.5;
+    const ssLifeSpan = 3.0;
+
+    for (let i = 0; i < shootingStarCount; i++) {
+      const startPos = getRandomSpherePoint(ssOuterRadius, ssInnerRadius);
+      ssPosition[i * 3 + 0] = startPos.x;
+      ssPosition[i * 3 + 1] = startPos.y;
+      ssPosition[i * 3 + 2] = startPos.z;
+
+      const vel = startPos.clone().normalize().multiplyScalar(1.0 + Math.random() * 0.5);
+      vel.x += (Math.random() - 0.5) * 0.5;
+      vel.y += (Math.random() - 0.5) * 0.5;
+      vel.z += (Math.random() - 0.5) * 0.5;
+      vel.normalize();
+
+      ssVelocity[i * 3 + 0] = vel.x;
+      ssVelocity[i * 3 + 1] = vel.y;
+      ssVelocity[i * 3 + 2] = vel.z;
+
+      ssStartTime[i] = Math.random() * ssLifeSpan;
+      ssSize[i] = Math.random() * 3 + 2.0;
+
+      const color = new Color();
+      color.setHSL(Math.random() * 0.2 + 0.6, 0.5 + Math.random() * 0.5, 0.7 + Math.random() * 0.3);
+      ssColor[i * 3 + 0] = color.r;
+      ssColor[i * 3 + 1] = color.g;
+      ssColor[i * 3 + 2] = color.b;
+    }
+
+    shootingStarGeometry.setAttribute("position", new BufferAttribute(ssPosition, 3));
+    shootingStarGeometry.setAttribute("aVelocity", new BufferAttribute(ssVelocity, 3));
+    shootingStarGeometry.setAttribute("aStartTime", new BufferAttribute(ssStartTime, 1));
+    shootingStarGeometry.setAttribute("size", new BufferAttribute(ssSize, 1));
+    shootingStarGeometry.setAttribute("aColor", new BufferAttribute(ssColor, 3));
+
+    const shootingStarMaterial = new RawShaderMaterial({
+      uniforms: {
+        uTime: { value: 0 },
+        uSize: { value: renderer.getPixelRatio() },
+        uAlphaMap: { value: alphaMap },
+        uSpeed: { value: 10.0 },
+        uLifeSpan: { value: ssLifeSpan }
+      },
+      vertexShader: `
+        precision highp float;
+        attribute vec3 position;
+        attribute vec3 aVelocity;
+        attribute float aStartTime;
+        attribute float size;
+        attribute vec3 aColor;
+        uniform mat4 projectionMatrix;
+        uniform mat4 modelViewMatrix;
+        uniform float uTime;
+        uniform float uSize;
+        uniform float uSpeed;
+        uniform float uLifeSpan;
+        varying float vProgress;
+        varying vec3 vColor;
+        #define PI 3.14159265359
+        void main() {
+          float timeInLife = mod(uTime + aStartTime, uLifeSpan);
+          vProgress = timeInLife / uLifeSpan;
+          vec3 newPos = position + aVelocity * uSpeed * timeInLife;
+          vColor = aColor;
+          vec4 mvp = modelViewMatrix * vec4(newPos, 1.0);
+          gl_Position = projectionMatrix * mvp;
+          float adjustedSize = size * (1.0 + sin(vProgress * PI) * 1.5);
+          gl_PointSize = (adjustedSize * uSize) / -mvp.z;
+        }
+      `,
+      fragmentShader: `
+        precision highp float;
+        uniform sampler2D uAlphaMap;
+        varying float vProgress;
+        varying vec3 vColor;
+        #define PI 3.14159265359
+        void main() {
+          vec2 uv = vec2(gl_PointCoord.x, 1.0 - gl_PointCoord.y);
+          float a = texture2D(uAlphaMap, uv).g;
+          if (a < 0.1) discard;
+          float fade = pow(sin(vProgress * PI), 2.0);
+          gl_FragColor = vec4(vColor, a * fade * 0.9);
+        }
+      `,
+      transparent: true,
+      depthTest: false,
+      depthWrite: false,
+      blending: AdditiveBlending
+    });
+
+    const shootingStars = new Points(shootingStarGeometry, shootingStarMaterial);
+    scene.add(shootingStars);
+
+    // --- ANIMACIONES Y CONTROLES ---
+    const u = galaxyMaterial.uniforms;
+
+    new TWEEN.Tween({
+      radius: 0,
+      spin: 0,
+      randomness: 0,
+      rotate: 0
+    })
+    .to({
+      radius: 1.618,
+      spin: Math.PI * 2,
+      randomness: 0.5,
+      rotate: Math.PI * 4
+    })
+    .duration(5000)
+    .easing(TWEEN.Easing.Cubic.InOut)
+    .onUpdate(({ radius, spin, randomness, rotate }) => {
+      u.uRadius.value = radius;
+      u.uSpin.value = spin;
+      u.uRandomness.value = randomness;
+      galaxy.rotation.y = rotate;
+      universe.rotation.y = rotate / 3;
+      spriteGroup.rotation.y = rotate;
+    })
+    .start();
+
+    setTimeout(() => {
+      spriteGroup.visible = true;
+    }, 2000);
+
+    setTimeout(() => {
+      heart.visible = true;
+      new TWEEN.Tween({ o: 0 })
+        .to({ o: 1 }, 1500)
+        .easing(TWEEN.Easing.Quadratic.Out)
+        .onUpdate(({ o }) => { heartMaterial.uniforms.uOpacity.value = o; })
+        .start();
+    }, 2000);
+
+    // --- LOOP DE ANIMACIÓN ---
+    const clock = new Clock();
+
+    renderer.setAnimationLoop(() => {
+      const elapsedTime = clock.getElapsedTime();
+
+      galaxyMaterial.uniforms.uTime.value = elapsedTime / 2;
+      universeMaterial.uniforms.uTime.value = elapsedTime / 3;
+      shootingStarMaterial.uniforms.uTime.value = elapsedTime;
+      heartMaterial.uniforms.uTime.value = elapsedTime;
+      heart.rotation.y += 0.002;
+
+      TWEEN.update();
+      orbit.update();
+      renderer.render(scene, camera);
+    });
+
+    // --- MANEJADOR DE RESIZE ---
+    addEventListener("resize", () => {
+      camera.aspect = innerWidth / innerHeight;
+      camera.updateProjectionMatrix();
+      renderer.setSize(innerWidth, innerHeight);
+    });
+  </script>
+</body>
+</html>
